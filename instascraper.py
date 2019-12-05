@@ -9,6 +9,7 @@ from datetime import date
 import csv
 import ssl
 import json
+import webbrowser
 from pprint import pprint
 
 
@@ -40,8 +41,11 @@ class InstaPostScraper:
         self.caption = str(
             base_data['edge_media_to_caption']['edges'][0]['node']['text'])
         self.likes = str(base_data['edge_media_preview_like']['count'])
-        self.location = str(json.loads(
-            base_data['location']['address_json'])['city_name'])
+        try:
+            self.location = str(json.loads(
+                base_data['location']['address_json'])['city_name'])
+        except:
+            self.location = "N/A"
         self.date_scraped = date.today().strftime("%B %d, %Y")
         self.preview = "<img src='./files/{0}.jpg' height='150px' />".format(
             self.id)
@@ -107,6 +111,7 @@ def main(input_file, output_file='output'):
     table += "</tbody></body></table></html>"
     output_html_file.writelines(table)
     output_html_file.close()
+    webbrowser.open('file://' + os.path.realpath(output_html))
 
 
 if __name__ == '__main__':
