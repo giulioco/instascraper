@@ -136,6 +136,7 @@ def main(input_file, output_file='output', generate_json=False, upload_json=Fals
         jsonfile.write(']}')
         jsonfile.close()
         csvfile.close()
+        print('JSON generated..')
         data = None
         if upload_json:
             with open(output_json, 'r') as json_file:
@@ -152,7 +153,7 @@ def main(input_file, output_file='output', generate_json=False, upload_json=Fals
                     pprint(response)
                     print("An error occurred. Try again later.")
     print("\nDone.")
-    # webbrowser.open('file://' + os.path.realpath(output_html))
+    webbrowser.open('file://' + os.path.realpath(output_html))
 
 
 if __name__ == '__main__':

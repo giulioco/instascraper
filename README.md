@@ -8,7 +8,7 @@ Your input file should be a text file with one link to a post on each line (e.g.
 
 ```bash
 $ python3 instascraper.py --help
-usage: instascraper [-h] -i input_file.txt [-o result]
+usage: instascraper [-h] -i input_file.txt [-o result] [-j] [-u]
 
 Instascraper is a batch scraper for instagram
 
@@ -20,6 +20,9 @@ optional arguments:
   -o result, --output result
                         The output file name. Two files will be generated with
                         a CSV and HTML extension
+  -j, --json            Set this flag if you'd like to also generate a JSON
+                        file.
+  -u, --upload          Set this flag if you'd like to upload the JSON.
 ```
 
 ## Contributing
