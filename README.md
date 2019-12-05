@@ -7,7 +7,7 @@ Instascraper is a Python script to scrape batches of instagram posts.
 Your input file should be a text file with one link to a post on each line (e.g. `https://instagram/p/{post_id}`)
 
 ```bash
-python3 instascraper.py input.txt output
+python3 instascraper.py --input input.txt
 ```
 
 ## Contributing

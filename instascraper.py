@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
+import argparse
 import requests
 import urllib
 from bs4 import BeautifulSoup
@@ -109,9 +110,28 @@ def main(input_file, output_file='output'):
 
 
 if __name__ == '__main__':
-    try:
-        input_file = sys.argv[1]
-        output_file = sys.argv[2]
-    except:
-        raise Exception('Please specify input_file and output_file')
-    main(input_file, output_file)
+    parser = argparse.ArgumentParser(
+        prog="instascraper",
+        description="Instascraper is a batch scraper for instagram"
+    )
+    parser.add_argument(
+        "-i",
+        "--input",
+        nargs=1,
+        required=True,
+        metavar="input_file.txt",
+        help="""The input file with the links for the Instagram. There should be\
+                one link per line."""
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        nargs=2,
+        default="output",
+        metavar="result",
+        help="""The output file name. Two files will be generated with a CSV and\
+                HTML extension"""
+    )
+
+    args = parser.parse_args()
+    main(args.input[0], args.output)
