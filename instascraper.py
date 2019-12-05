@@ -11,6 +11,7 @@ import ssl
 import json
 import webbrowser
 from pprint import pprint
+from tqdm import tqdm
 
 
 class InstaPostScraper:
@@ -98,7 +99,8 @@ def main(input_file, output_file='output'):
         table += "  </tr>\n"
         table += "</thead>\n"
         table += "<tbody>\n"
-        for link in lines:
+        for i in tqdm(range(len(lines))):
+            link = lines[i]
             post = InstaPostScraper(link)
             post_data = post.scrape()
             writer.writerow(post_data)
