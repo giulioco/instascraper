@@ -71,9 +71,10 @@ class InstaPostScraper:
         return [self.post_link, self.source_link, self.author_link, self.caption, self.likes, self.location, self.preview, self.date_scraped]
 
 
-def main(input_file, output_file='output'):
+def main(input_file, output_file='output', generate_json=False, upload_json=False):
     lines = open(input_file).read().splitlines()
     output_csv = "{}.csv".format(output_file)
+    output_json = "{}.json".format(output_file)
     output_html = "{}.html".format(output_file)
     output_html_file = open(output_html, "w")
     table = """
@@ -85,8 +86,9 @@ def main(input_file, output_file='output'):
         <body>\n
         <table class="pure-table">\n
     """
-    with open(output_csv, 'w', newline='') as file:
-        writer = csv.writer(file)
+    print('Scraping is starting...\n')
+    with open(output_csv, 'w', newline='') as output_csv_file:
+        writer = csv.writer(output_csv_file)
         header = ["Url", "Source", "Author", "Caption",
                          "Likes", "Location", "Date scraped"]
         html_header = ["Original", "Source", "Author", "Caption",
@@ -113,6 +115,39 @@ def main(input_file, output_file='output'):
     table += "</tbody></body></table></html>"
     output_html_file.writelines(table)
     output_html_file.close()
+    output_csv_file.close()
+    print("Scraping done.\n")
+    if generate_json or upload_json:
+        csvfile = open(output_csv, 'r')
+        jsonfile = open(output_json, 'w')
+        fieldnames = ["Url", "Source", "Author", "Caption",
+                      "Likes", "Location", "Date scraped"]
+        reader = csv.DictReader(csvfile, fieldnames)
+        jsonfile.write('{ "posts": [')
+        line = 0
+        for row in reader:
+            if row["Url"] == "Url":
+                continue
+            if line:
+                jsonfile.write(',\n')
+            json.dump(row, jsonfile)
+            line += 1
+        jsonfile.write(']}')
+        jsonfile.close()
+        csvfile.close()
+        data = None
+        if upload_json:
+            with open(output_json, 'r') as json_file:
+                data = json.load(json_file)
+                print("Uploading JSON...")
+                result = requests.post(
+                    'https://api.myjson.com/bins/', json=data)
+                if result.status_code == '200':
+                    print("Uploaded JSON successfully. \n Response: {}".format(
+                        result.json))
+                else:
+                    print("An error occurred. Try again later.")
+    print("\nDone.")
     webbrowser.open('file://' + os.path.realpath(output_html))
 
 
@@ -140,5 +175,19 @@ if __name__ == '__main__':
                 HTML extension"""
     )
 
+    parser.add_argument(
+        "-j",
+        "--json",
+        action='store_true',
+        help="""Set this flag if you'd like to also generate a JSON file."""
+    )
+
+    parser.add_argument(
+        "-u",
+        "--upload",
+        action='store_true',
+        help="""Set this flag if you'd like to upload the JSON."""
+    )
+
     args = parser.parse_args()
-    main(args.input[0], args.output)
+    main(args.input[0], args.output, args.json, args.upload)
