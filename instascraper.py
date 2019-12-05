@@ -133,7 +133,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "-o",
         "--output",
-        nargs=2,
+        nargs=1,
         default="output",
         metavar="result",
         help="""The output file name. Two files will be generated with a CSV and\
