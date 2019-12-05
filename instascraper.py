@@ -118,6 +118,7 @@ def main(input_file, output_file='output', generate_json=False, upload_json=Fals
     output_csv_file.close()
     print("Scraping done.\n")
     if generate_json or upload_json:
+        print('Generating JSON...')
         csvfile = open(output_csv, 'r')
         jsonfile = open(output_json, 'w')
         fieldnames = ["Url", "Source", "Author", "Caption",
@@ -140,15 +141,18 @@ def main(input_file, output_file='output', generate_json=False, upload_json=Fals
             with open(output_json, 'r') as json_file:
                 data = json.load(json_file)
                 print("Uploading JSON...")
-                result = requests.post(
+                response = requests.post(
                     'https://api.myjson.com/bins/', json=data)
-                if result.status_code == '200':
-                    print("Uploaded JSON successfully. \n Response: {}".format(
-                        result.json))
+                if response.status_code == 200 or response.status_code == 201:
+                    result = json.loads(response.text)
+                    url = result['uri']
+                    print("\nUploaded JSON successfully. \n\nURL: {}".format(
+                        url))
                 else:
+                    pprint(response)
                     print("An error occurred. Try again later.")
     print("\nDone.")
-    webbrowser.open('file://' + os.path.realpath(output_html))
+    # webbrowser.open('file://' + os.path.realpath(output_html))
 
 
 if __name__ == '__main__':
