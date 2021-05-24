@@ -12,6 +12,7 @@ import json
 import webbrowser
 from pprint import pprint
 from tqdm import tqdm
+from time import sleep
 
 
 class InstaPostScraper:
@@ -28,34 +29,48 @@ class InstaPostScraper:
         self.ctx = ssl.create_default_context()
         self.ctx.check_hostname = False
         self.ctx.verify_mode = ssl.CERT_NONE
+        self.header = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'
+        }
 
-    def getData(self):
-        html = urllib.request.urlopen(str(self.url), context=self.ctx).read()
-        soup = BeautifulSoup(html, 'html.parser')
-        script = soup.find('script', text=lambda t:
-                           t.startswith('window._sharedData'))
-        page_json = script.text.split(' = ', 1)[1].rstrip(';')
-        data = json.loads(page_json)
-        base_data = data['entry_data']['PostPage'][0]['graphql']['shortcode_media']
-        self.src = str(base_data['display_resources'][2]['src'])
-        self.author = str(base_data['owner']['username'])
-        self.caption = str(
-            base_data['edge_media_to_caption']['edges'][0]['node']['text'])
-        self.likes = str(base_data['edge_media_preview_like']['count'])
+    def get_data(self):
         try:
-            self.location = str(json.loads(
-                base_data['location']['address_json'])['city_name'])
+            req = urllib.request.Request(
+                str(self.url),
+                data=None,
+                headers=self.header
+            )
+            html = urllib.request.urlopen(req, context=self.ctx).read()
+
+            soup = BeautifulSoup(html, 'html.parser')
+            script = soup.find('script', text=lambda t:
+                            t.startswith('window._sharedData'))
+
+            page_json = str(script).lstrip('<script type="text/javascript">window._sharedData = ').rstrip(';</script>')
+            data = json.loads(page_json)
+            base_data = data['entry_data']['PostPage'][0]['graphql']['shortcode_media']
+            self.src = str(base_data['display_resources'][2]['src'])
+            self.author = str(base_data['owner']['username'])
+            self.caption = str(
+                base_data['edge_media_to_caption']['edges'][0]['node']['text'])
+            self.likes = str(base_data['edge_media_preview_like']['count'])
+            try:
+                self.location = str(json.loads(
+                    base_data['location']['address_json'])['city_name'])
+            except:
+                self.location = "N/A"
+            self.date_scraped = date.today().strftime("%B %d, %Y")
+            self.preview = "<img src='./files/{0}.jpg' height='150px' />".format(
+                self.id)
+            self.source_link = "<a href='{}' target='_blank'>source</a>".format(
+                self.src)
+            self.author_link = "<a href='https://instagram.com/{}' target='_blank'>@{}</a>".format(
+                self.author, self.author)
+            self.post_link = "<a href='https://instagram.com/p/{}' target='_blank'>post</a>".format(
+                self.id)
+            return True
         except:
-            self.location = "N/A"
-        self.date_scraped = date.today().strftime("%B %d, %Y")
-        self.preview = "<img src='./files/{0}.jpg' height='150px' />".format(
-            self.id)
-        self.source_link = "<a href='{}' target='_blank'>source</a>".format(
-            self.src)
-        self.author_link = "<a href='https://instagram.com/{}' target='_blank'>@{}</a>".format(
-            self.author, self.author)
-        self.post_link = "<a href='https://instagram.com/p/{}' target='_blank'>post</a>".format(
-            self.id)
+            return False
 
     def download_image(self):
         if not os.path.exists('files'):
@@ -63,16 +78,22 @@ class InstaPostScraper:
         urllib.request.urlretrieve(self.src, "files/{}.jpg".format(self.id))
 
     def scrape(self):
-        self.getData()
-        self.download_image()
-        return [self.url, self.src, self.author, self.caption, self.likes, self.location, self.date_scraped]
+        success = self.get_data()
+        if success:
+            self.download_image()
+            return [self.id, self.url, self.src, self.author, self.caption, self.likes, self.location, self.date_scraped]
+        else:
+            return False
 
     def get_html(self):
         return [self.post_link, self.source_link, self.author_link, self.caption, self.likes, self.location, self.preview, self.date_scraped]
 
 
-def main(input_file, output_file='output', generate_json=False, upload_json=False):
+def main(input_file, output_file, generate_json=False, upload_json=False):
     lines = open(input_file).read().splitlines()
+    if not output_file:
+        output_file = "{}_result".format(input_file if len(
+            input_file.split('.')) == 1 else input_file.split('.')[0])
     output_csv = "{}.csv".format(output_file)
     output_json = "{}.json".format(output_file)
     output_html = "{}.html".format(output_file)
@@ -89,11 +110,13 @@ def main(input_file, output_file='output', generate_json=False, upload_json=Fals
     print('Scraping is starting...\n')
     with open(output_csv, 'w', newline='') as output_csv_file:
         writer = csv.writer(output_csv_file)
-        header = ["Url", "Source", "Author", "Caption",
-                         "Likes", "Location", "Date scraped"]
+        header = ["id", "Url", "Source", "Author", "Caption",
+                  "Likes", "Location", "Date scraped"]
         html_header = ["Original", "Source", "Author", "Caption",
                        "Likes", "Location", "Preview", "Date scraped", "Scheduled"]
         writer.writerow(header)
+        successful = 0
+        failures = 0
         table += "<thead>\n"
         table += "  <tr>\n"
         for column in html_header:
@@ -105,8 +128,13 @@ def main(input_file, output_file='output', generate_json=False, upload_json=Fals
             link = lines[i]
             post = InstaPostScraper(link)
             post_data = post.scrape()
-            writer.writerow(post_data)
-            html_data = post.get_html()
+            if post_data:
+                writer.writerow(post_data)
+                html_data = post.get_html()
+                successful += 1
+            else:
+                failures += 1
+                continue
             table += "  <tr>\n"
             for col in html_data:
                 table += "    <td>{0}</td>\n".format(col)
@@ -116,18 +144,18 @@ def main(input_file, output_file='output', generate_json=False, upload_json=Fals
     output_html_file.writelines(table)
     output_html_file.close()
     output_csv_file.close()
-    print("Scraping done.\n")
+    print(f"\nScraping done. Total successful posts scraped: {successful}, total failures: {failures}")
     if generate_json or upload_json:
         print('Generating JSON...')
         csvfile = open(output_csv, 'r')
         jsonfile = open(output_json, 'w')
-        fieldnames = ["Url", "Source", "Author", "Caption",
-                      "Likes", "Location", "Date scraped"]
+        fieldnames = ["id", "url", "source", "author", "caption",
+                      "likes", "location", "date_scraped"]
         reader = csv.DictReader(csvfile, fieldnames)
         jsonfile.write('{ "posts": [')
         line = 0
         for row in reader:
-            if row["Url"] == "Url":
+            if row["url"] == "Url":
                 continue
             if line:
                 jsonfile.write(',\n')

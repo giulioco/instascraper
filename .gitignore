@@ -2,5 +2,6 @@ files/*
 *.csv
 *.html
 *.json
+*.txt
 files
 test_input
